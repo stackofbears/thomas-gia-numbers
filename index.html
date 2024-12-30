@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      #buttons {
+          background-color: #c8caf8;
+          height: 70%;
+          margin: auto;
+          margin-top: 10%;
+          padding: 7% 9%;
+          max-width: fit-content;
+          font-weight: bold;
+      }
+      .option {
+          display: inline-block;
+          max-width: fit-content;
+          margin: auto;
+      }
+      button {
+          font-size: 26pt;
+          font-weight: bold;
+          display: block;
+          color: white;
+          margin: 10px;
+          margin-top: 20px;
+          border: none;
+          background: linear-gradient(to bottom, #446699, #10316f);
+          height: 100px;
+          width: 200px;
+      }
+      .marker, .pad {
+          display: block;
+          margin: 0 auto;
+          font-size: 26pt;
+          text-align: center;
+          visibility: hidden;
+      }
+      #infoBlock {
+          font-size: 18pt;
+          margin-left: auto;
+          margin-top: 20px;
+          margin-right: 20px;
+          width: 150px;
+      }
+      .check { color: green; }
+      .x { color: red; }
+      #feedback {
+          height: 20px;
+          width: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="infoBlock">
+      <span class="check">✓</span><span id="correctCount">0</span>&nbsp;
+      <span class="x">✗</span><span id="incorrectCount">0</span>
+      <div>Avg: <span id="averageTime">0.00</span>s</div>
+      <div><input id="feedback" type="checkbox">Feedback</input></div>
+    </div>
+
+    <div id="buttons">
+      <div class="option">
+        <div class="pad">&nbsp;</div>
+        <button id="a"></button>
+        <div class="marker">✗</div>
+      </div>
+      <div class="option">
+        <div class="pad">&nbsp;</div>
+        <button id="b"></button>
+        <div class="marker">✗</div>
+      </div>
+      <div class="option">
+        <div class="pad">&nbsp;</div>
+        <button id="c"></button>
+        <div class="marker">✗</div>
+      </div>
+    </div>
+    <script type="text/javascript">
+      function rand() {
+          return Math.floor(Math.random() * 20) + 1;
+      }
+
+      function hasEquidistance(a, b, c) {
+          const arr = [a, b, c].toSorted((x, y) => x - y);
+          return arr[1] - arr[0] === arr[2] - arr[1];
+      }
+
+      function genNumbers() {
+          let a = rand();
+
+          let b;
+          do b = rand(); while (b === a);
+
+          let c;
+          do c = rand(); while (c === a || c === b || hasEquidistance(a, b, c));
+
+          return [a, b, c];
+      }
+
+      function markCorrect(button) {
+          if (document.getElementById("feedback").checked) {
+              const [marker] = button.parentElement.getElementsByClassName("marker");
+              marker.style.color = "green";
+              marker.innerText = "✓";
+              marker.style.visibility = "visible";
+          }
+      }
+
+      function markIncorrect(button) {
+          if (document.getElementById("feedback").checked) {
+              const [marker] = button.parentElement.getElementsByClassName("marker");
+              marker.style.color = "red";
+              marker.innerText = "✗";
+              marker.style.visibility = "visible";
+          }
+      }
+
+      function resetButtonColors() {
+          for (let button of buttons) {
+              button.style.background = "linear-gradient(to bottom, #446699, #10316f)";
+          }
+      }
+
+      const stats = {
+          correctTimes: [],
+          timesTotal: 0,
+          incorrect: 0,
+
+          recordCorrect() {
+              const seconds = (Date.now() - state.startMs) / 1000;
+              this.timesTotal += seconds;
+              this.correctTimes.push(seconds);
+              document.getElementById("correctCount").innerText = this.correctTimes.length;
+              this.displayAverage();
+          },
+
+          recordIncorrect(seconds) {
+              document.getElementById("incorrectCount").innerText = ++this.incorrect;
+          },
+
+          displayAverage() {
+              if (this.correctTimes.length !== 0) {
+                  const avg = this.timesTotal / this.correctTimes.length;
+                  document.getElementById("averageTime").innerText = avg.toFixed(2);
+              }
+          },
+      };
+
+      const state = {
+          startMs: 0,
+          nums: [],
+          clicksAllowed: false,
+
+          init() {
+              for (const marker of document.getElementsByClassName("marker")) {
+                  marker.style.visibility = "hidden";
+              }
+              this.nums = genNumbers();
+              buttons.forEach((button, i) => button.innerText = this.nums[i]);
+              this.clicksAllowed = true;
+              this.startMs = Date.now();
+          },
+      };
+
+      const buttons = ["a", "b", "c"].map(id => document.getElementById(id));
+
+      window.addEventListener("mouseup", resetButtonColors);
+      window.addEventListener("blur", resetButtonColors);
+
+      buttons.forEach((button, i) => {
+          button.addEventListener("mousedown", () => {
+              button.style.background = "linear-gradient(to bottom, #10316f, #446699)";
+          });
+
+          button.addEventListener("click", () => {
+              if (!state.clicksAllowed) return;
+              state.clicksAllowed = false;
+              let [lo, mid, hi] = state.nums.toSorted((x, y) => x - y);
+              const ans = mid - lo > hi - mid ? lo : hi;
+
+              let initTimeout;
+              if (button.innerText == ans) {
+                  stats.recordCorrect();
+                  markCorrect(button);
+                  initTimeout = 500;
+              } else {
+                  stats.recordIncorrect();
+                  markIncorrect(button);
+                  for (let otherButton of buttons) {
+                      if (otherButton.innerText == ans) {
+                          markCorrect(otherButton);
+                      }
+                  }
+                  initTimeout = 1000;
+              }
+
+              if (document.getElementById("feedback").checked) {
+                  setTimeout(() => state.init(), initTimeout);
+              } else {
+                  state.init();
+              }
+          });
+      });
+
+      state.init();
+    </script>
+  </body>
+</html>
